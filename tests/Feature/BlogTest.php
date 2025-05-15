@@ -333,6 +333,7 @@ class BlogTest extends TestCase
             'body' => 'This is another comment.',
             'created_at' => now()->subDays(1),
         ]);
+          
 
         $response = $this->get(route('post', $post));
 
@@ -391,6 +392,39 @@ class BlogTest extends TestCase
      */
     public function testBlogPostsPageHasPagination()
     {
-        $this->markTestIncomplete();
+        $allPosts = collect(); 
+
+        User::factory(10)->create()->each(function ($user) use (&$allPosts) {
+            $posts = Post::factory(rand(1, 5))->make()->each(function ($post) use ($user) {
+                $post->user_id = $user->id;
+            });
+
+            $user->posts()->saveMany($posts);
+
+            $allPosts = $allPosts->merge($posts); 
+        });
+
+       
+        $response = $this->get(route('posts'));
+
+        
+        $response->assertStatus(200);
+
+        
+        $titlesToCheck = $allPosts->take(9)->pluck('title')->toArray();
+
+        
+        foreach ($titlesToCheck as $title) {
+            $response->assertSee($title);
+        }
+
+        
+        $response->assertViewHas('posts', function ($posts) {
+            return $posts->hasPages() === true;
+        });
+    
     }
+
+
+
 }
